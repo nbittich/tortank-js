@@ -228,19 +228,11 @@ fn make_response<'a, 'b, C: Context<'a>>(
     } else {
         false
     };
-    let output_file_path = if let Some(output_file_path) = output_file_path {
-        Some(output_file_path.value(cx))
-    } else {
-        None
-    };
-    let buf_size = if let Some(buf_size) = buf_size {
-        Some(buf_size.value(cx).abs() as usize)
-    } else {
-        None
-    };
+    let output_file_path = output_file_path.map(|output_file_path| output_file_path.value(cx));
+    let buf_size = buf_size.map(|buf_size| buf_size.value(cx).abs() as usize);
 
     if let Some(opf) = output_file_path {
-        return match doc.to_file(&opf, buf_size, !as_n_3) {
+        return match doc.to_file(opf, buf_size, !as_n_3) {
             Ok(_) => {
                 let b = cx.boolean(true);
                 let b = b.as_value(cx);
@@ -248,21 +240,19 @@ fn make_response<'a, 'b, C: Context<'a>>(
             }
             Err(e) => cx.throw_error(e.to_string()),
         };
+    } else if as_n_3 {
+        let ttl = doc.to_string();
+        let s = cx.string(ttl);
+        let s = s.as_value(cx);
+        Ok(s)
     } else {
-        if as_n_3 {
-            let ttl = doc.to_string();
-            let s = cx.string(ttl);
-            let s = s.as_value(cx);
-            return Ok(s);
-        } else {
-            let json_stmts: Vec<RdfJsonTriple> = (&doc).into();
-            let array = JsArray::new(cx, json_stmts.len() as u32);
-            for (idx, triple) in json_stmts.into_iter().enumerate() {
-                let stmt_obj = convert_rdf_json_triple_to_neon_object(cx, triple)?;
-                array.set(cx, idx as u32, stmt_obj)?;
-            }
-            return Ok(array.upcast());
+        let json_stmts: Vec<RdfJsonTriple> = (&doc).into();
+        let array = JsArray::new(cx, json_stmts.len() as u32);
+        for (idx, triple) in json_stmts.into_iter().enumerate() {
+            let stmt_obj = convert_rdf_json_triple_to_neon_object(cx, triple)?;
+            array.set(cx, idx as u32, stmt_obj)?;
         }
+        return Ok(array.upcast());
     }
 }
 fn make_doc<'a, 'b>(

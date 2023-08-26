@@ -1,9 +1,5 @@
-use std::borrow::Cow;
-
 use neon::prelude::*;
-use tortank::turtle::turtle_doc::{
-    Node, RdfJsonNodeResult, RdfJsonTriple, TurtleDoc, TurtleDocError,
-};
+use tortank::turtle::turtle_doc::{RdfJsonNodeResult, RdfJsonTriple, TurtleDoc, TurtleDocError};
 
 const PARAMS_LHS_PATH: &str = "lhsPath";
 const PARAMS_RHS_PATH: &str = "rhsPath";
@@ -91,16 +87,8 @@ pub fn statements(mut cx: FunctionContext) -> JsResult<JsValue> {
 
     match ttl_doc {
         Ok(ttl_doc) => {
-            let subject = if let Some(subject) = subject {
-                Some(subject.value(&mut cx))
-            } else {
-                None
-            };
-            let predicate = if let Some(predicate) = predicate {
-                Some(predicate.value(&mut cx))
-            } else {
-                None
-            };
+            let subject = subject.map(|subject| subject.value(&mut cx));
+            let predicate = predicate.map(|predicate| predicate.value(&mut cx));
             let object = if let Some(object) = object {
                 let object = object.value(&mut cx);
                 Some(object)

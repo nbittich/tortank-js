@@ -14,7 +14,7 @@ Use [Tortank](https://github.com/nbittich/tortank).
 - `docker run --rm -it node:16-bookworm bash`
 - `mkdir example && cd example`
 - `npm init --yes`
-- `npm i rdf-tortank-linux"`
+- `npm i rdf-tortank-linux`
 - `node`
 - `const tortank = require('rdf-tortank-linux')`
 

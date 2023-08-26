@@ -37,7 +37,7 @@ This is the preferred solution to target a different platform.
 - `npm init --yes`
 - `npm i --save-dev cargo-cp-artifact rdf-tortank"`
 - `node`
-- `const tortank = require('rdf-tortank-linux')`
+- `const tortank = require('rdf-tortank')`
 ## Documentation
 
 ### Statements
@@ -130,8 +130,6 @@ try {
 
 
 ```
-
-
 
 ### Intersection
 

@@ -26,7 +26,7 @@ This is the preferred solution to target a different platform.
 2. Install Node 
 3. Inside your project `npm i --save-dev cargo-cp-artifact rdf-tortank`
 4. `node`
-5. `const tortank = requre('rdf-tortank')`
+5. `const tortank = require('rdf-tortank')`
 
 #### Example using docker
 

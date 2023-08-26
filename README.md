@@ -35,7 +35,7 @@ This is the preferred solution to target a different platform.
 - `curl -fsSL https://deb.nodesource.com/setup_16.x |  bash - && apt-get install -y nodejs`
 - `mkdir example && cd example`
 - `npm init --yes`
-- `npm i --save-dev cargo-cp-artifact rdf-tortank"`
+- `npm i --save-dev cargo-cp-artifact rdf-tortank`
 - `node`
 - `const tortank = require('rdf-tortank')`
 ## Documentation

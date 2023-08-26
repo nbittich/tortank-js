@@ -5,9 +5,83 @@ Use [Tortank](https://github.com/nbittich/tortank).
 
 ## Installation 
 
-TODO
+### Using the prebuilt node addon
 
+<b>This will only work if you are on linux and if you have GLIBC 2.31+ installed (check with `ldd --version`)</b>
+
+#### Example using docker
+
+- `docker run --rm -it node:16-bookworm bash`
+- `mkdir example && cd example`
+- `npm init --yes`
+- `npm i rdf-tortank-linux"`
+- `node`
+- `const tortank = require('rdf-tortank-linux')`
+
+### Using Rust
+
+This is the preferred solution to target a different platform.
+
+1. Install [Rust](https://www.rust-lang.org/tools/install)
+2. Install Node 
+3. Inside your project `npm i --save-dev cargo-cp-artifact rdf-tortank`
+4. `node`
+5. `const tortank = requre('rdf-tortank')`
+
+#### Example using docker
+
+- `docker run --rm -it rust bash`
+- `apt update && apt upgrade -y`
+- `curl -fsSL https://deb.nodesource.com/setup_16.x |  bash - && apt-get install -y nodejs`
+- `mkdir example && cd example`
+- `npm init --yes`
+- `npm i --save-dev cargo-cp-artifact rdf-tortank"`
+- `node`
+- `const tortank = require('rdf-tortank-linux')`
 ## Documentation
+
+### Statements
+
+Filter a Model based on subject, predicate object. It uses same params as 
+examples below, except there is no rhsPath / rhsData.
+
+```js
+const data = `
+      @prefix foaf: <http://foaf.com/>.
+        [ foaf:name "Alice" ] foaf:knows [
+          foaf:name "Bob" ;
+          foaf:lastName "George", "Joshua" ;
+          foaf:knows [
+          foaf:name "Eve" ] ;
+    foaf:mbox <bob@example.com>] .
+`;
+
+let params = {
+    lhsData: data, // string|undefined, if not provided use lhsPath
+    outputType: "n3", // also optional
+    subject: undefined, // uri|undefined, to filter subjects (must be an absolute uri)
+    predicate: "<http://foaf.com/name>", // rdf iri|undefined, to filter predicates (muts be an absolute uri)
+    object: '"Eve"' // rdf string | rdf iri | undefined, to filter objects
+};
+
+tortank.statements(params);
+
+```
+
+You can also use prefixes, assuming they are known by the model. In the previous example, you could also do this:
+
+```js
+let paramsWithPrefix = {
+    lhsData: data, 
+    outputType: "js", 
+    subject: undefined, 
+    predicate: "foaf:lastName", // use prefix foaf
+    object: undefined // rdf string | rdf iri | undefined, to filter objects
+};
+tortank.statements(params);
+
+
+```
 
 ### Difference
 
@@ -86,46 +160,4 @@ try {
 }
 ```
 
-### Statements
-
-Filter a Model based on subject, predicate object. It uses same params as previous
-examples, except there is no rhsPath / rhsData.
-
-```js
-const data = `
-      @prefix foaf: <http://foaf.com/>.
-        [ foaf:name "Alice" ] foaf:knows [
-          foaf:name "Bob" ;
-          foaf:lastName "George", "Joshua" ;
-          foaf:knows [
-          foaf:name "Eve" ] ;
-    foaf:mbox <bob@example.com>] .
-`;
-
-let params = {
-    lhsData: data, // string|undefined, if not provided use lhsPath
-    outputType: "n3", // also optional
-    subject: undefined, // uri|undefined, to filter subjects (must be an absolute uri)
-    predicate: "<http://foaf.com/name>", // rdf iri|undefined, to filter predicates (muts be an absolute uri)
-    object: '"Eve"' // rdf string | rdf iri | undefined, to filter objects
-};
-
-tortank.statements(params);
-
-```
-
-You can also use prefixes, assuming they are known by the model. In the previous example, you could also do this:
-
-```js
-let paramsWithPrefix = {
-    lhsData: data, 
-    outputType: "js", 
-    subject: undefined, 
-    predicate: "foaf:lastName", // use prefix foaf
-    object: undefined // rdf string | rdf iri | undefined, to filter objects
-};
-tortank.statements(params);
-
-
-```
 

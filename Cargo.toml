@@ -1,5 +1,5 @@
 [package]
-name = "tortank-js"
+name = "rdf-tortank"
 version = "0.1.0"
 description = "Turtle/N3 parser"
 authors = ["Nordine Bittich"]

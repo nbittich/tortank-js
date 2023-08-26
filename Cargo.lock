@@ -123,6 +123,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdf-tortank"
+version = "0.1.0"
+dependencies = [
+ "neon",
+ "serde",
+ "serde_json",
+ "tortank",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -224,16 +234,6 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "uuid",
-]
-
-[[package]]
-name = "tortank-js"
-version = "0.1.0"
-dependencies = [
- "neon",
- "serde",
- "serde_json",
- "tortank",
 ]
 
 [[package]]

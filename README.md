@@ -1,7 +1,7 @@
 # TortankJS
 
 Node addon to parse and manipulate n3/turtle data. 
-Use [Tortank](https://github.com/nbittich/tortank).
+Uses [Tortank](https://github.com/nbittich/tortank).
 
 ## Installation 
 

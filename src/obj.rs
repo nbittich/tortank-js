@@ -5,27 +5,73 @@ use tortank::turtle::turtle_doc::{
     Node, RdfJsonNodeResult, RdfJsonTriple, TurtleDoc, TurtleDocError,
 };
 
-pub fn difference(mut cx: FunctionContext) -> JsResult<JsObject> {
+const PARAMS_LHS_PATH: &str = "lhsPath";
+const PARAMS_RHS_PATH: &str = "rhsPath";
+const PARAMS_LHS_DATA: &str = "lhsData";
+const PARAMS_RHS_DATA: &str = "rhsData";
+const PARAMS_SUBJECT_NODE: &str = "subject";
+const PARAMS_PREDICATE_NODE: &str = "predicate";
+const PARAMS_OBJECT_NODE: &str = "object";
+const PARAMS_TTL_PATH: &str = "ttlPath";
+const PARAMS_TTL_DATA: &str = "ttlData";
+const PARAMS_AS_N3: &str = "asN3";
+const PARAMS_OUTPUT_FILE_PATH: &str = "outputFilePath";
+const PARAMS_BUF_SIZE: &str = "bufSize";
+
+pub fn merge(mut cx: FunctionContext) -> JsResult<JsValue> {
+    let params = cx.argument::<JsObject>(0)?;
+    let mut buf_lhs = String::new();
+    let mut buf_rhs = String::new();
+    let ttl_doc_lhs = make_doc(
+        &params,
+        &mut cx,
+        &mut buf_lhs,
+        PARAMS_LHS_PATH,
+        PARAMS_LHS_DATA,
+    );
+    let ttl_doc_rhs = make_doc(
+        &params,
+        &mut cx,
+        &mut buf_rhs,
+        PARAMS_RHS_PATH,
+        PARAMS_RHS_PATH,
+    );
+
+    match (ttl_doc_lhs, ttl_doc_rhs) {
+        (Ok(lhs), Ok(rhs)) => {
+            let combine = lhs + rhs;
+            make_response(&params, &mut cx, combine)
+        }
+        (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.to_string()),
+        (Err(e1), Err(e2)) => cx.throw_error(e1.to_string() + &e2.to_string()),
+    }
+}
+pub fn difference(mut cx: FunctionContext) -> JsResult<JsValue> {
     let params = cx.argument::<JsObject>(0)?;
 
     let mut buf_lhs = String::new();
     let mut buf_rhs = String::new();
-    let ttl_doc_lhs = make_doc(&params, &mut cx, &mut buf_lhs, "lhsPath", "lhsData");
-    let ttl_doc_rhs = make_doc(&params, &mut cx, &mut buf_rhs, "rhsPath", "rhsData");
+    let ttl_doc_lhs = make_doc(
+        &params,
+        &mut cx,
+        &mut buf_lhs,
+        PARAMS_LHS_PATH,
+        PARAMS_LHS_DATA,
+    );
+    let ttl_doc_rhs = make_doc(
+        &params,
+        &mut cx,
+        &mut buf_rhs,
+        PARAMS_RHS_PATH,
+        PARAMS_RHS_PATH,
+    );
 
     match (ttl_doc_lhs, ttl_doc_rhs) {
         (Ok(lhs), Ok(rhs)) => {
             let diff = lhs.difference(&rhs);
             match diff {
-                Ok(model) => {
-                    let json_stmts: Vec<RdfJsonTriple> = (&model).into();
-                    let array = JsArray::new(&mut cx, json_stmts.len() as u32);
-                    for (idx, triple) in json_stmts.into_iter().enumerate() {
-                        let stmt_obj = convert_rdf_json_triple_to_neon_object(&mut cx, triple)?;
-                        array.set(&mut cx, idx as u32, stmt_obj)?;
-                    }
-                    Ok(array.upcast())
-                }
+                Ok(model) => make_response(&params, &mut cx, model),
+
                 Err(e) => cx.throw_error(e.to_string()),
             }
         }
@@ -34,16 +80,16 @@ pub fn difference(mut cx: FunctionContext) -> JsResult<JsObject> {
     }
 }
 
-pub fn filter(mut cx: FunctionContext) -> JsResult<JsObject> {
+pub fn statements(mut cx: FunctionContext) -> JsResult<JsValue> {
     let params = cx.argument::<JsObject>(0)?;
 
     let mut buf = String::new();
 
-    let subject: Option<Handle<JsString>> = params.get_opt(&mut cx, "subject")?;
-    let predicate: Option<Handle<JsString>> = params.get_opt(&mut cx, "predicate")?;
-    let object: Option<Handle<JsString>> = params.get_opt(&mut cx, "object")?;
+    let subject: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_SUBJECT_NODE)?;
+    let predicate: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_PREDICATE_NODE)?;
+    let object: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_OBJECT_NODE)?;
 
-    let ttl_doc = make_doc(&params, &mut cx, &mut buf, "ttlPath", "ttlData");
+    let ttl_doc = make_doc(&params, &mut cx, &mut buf, PARAMS_TTL_PATH, PARAMS_TTL_DATA);
 
     match ttl_doc {
         Ok(ttl_doc) => {
@@ -71,39 +117,42 @@ pub fn filter(mut cx: FunctionContext) -> JsResult<JsObject> {
             let filtered_stmts = ttl_doc
                 .list_statements(subject.as_ref(), predicate.as_ref(), object.as_ref())
                 .into_iter()
-                .map(|stmt| stmt.into())
-                .collect::<Vec<RdfJsonTriple>>();
-            let array = JsArray::new(&mut cx, filtered_stmts.len() as u32);
-            for (idx, triple) in filtered_stmts.into_iter().enumerate() {
-                let stmt_obj = convert_rdf_json_triple_to_neon_object(&mut cx, triple)?;
-                array.set(&mut cx, idx as u32, stmt_obj)?;
+                .cloned()
+                .collect();
+
+            match TurtleDoc::from_statements(filtered_stmts) {
+                Ok(doc) => make_response(&params, &mut cx, doc),
+                Err(e) => cx.throw_error(e.to_string()),
             }
-            Ok(array.upcast())
         }
         Err(e) => cx.throw_error(e.to_string()),
     }
 }
-pub fn intersection(mut cx: FunctionContext) -> JsResult<JsObject> {
+pub fn intersection(mut cx: FunctionContext) -> JsResult<JsValue> {
     let params = cx.argument::<JsObject>(0)?;
 
     let mut buf_lhs = String::new();
     let mut buf_rhs = String::new();
-    let ttl_doc_lhs = make_doc(&params, &mut cx, &mut buf_lhs, "lhsPath", "lhsData");
-    let ttl_doc_rhs = make_doc(&params, &mut cx, &mut buf_rhs, "rhsPath", "rhsData");
+    let ttl_doc_lhs = make_doc(
+        &params,
+        &mut cx,
+        &mut buf_lhs,
+        PARAMS_LHS_PATH,
+        PARAMS_LHS_DATA,
+    );
+    let ttl_doc_rhs = make_doc(
+        &params,
+        &mut cx,
+        &mut buf_rhs,
+        PARAMS_RHS_PATH,
+        PARAMS_RHS_DATA,
+    );
 
     match (ttl_doc_lhs, ttl_doc_rhs) {
         (Ok(lhs), Ok(rhs)) => {
             let diff = lhs.intersection(&rhs);
             match diff {
-                Ok(model) => {
-                    let json_stmts: Vec<RdfJsonTriple> = (&model).into();
-                    let array = JsArray::new(&mut cx, json_stmts.len() as u32);
-                    for (idx, triple) in json_stmts.into_iter().enumerate() {
-                        let stmt_obj = convert_rdf_json_triple_to_neon_object(&mut cx, triple)?;
-                        array.set(&mut cx, idx as u32, stmt_obj)?;
-                    }
-                    Ok(array.upcast())
-                }
+                Ok(model) => make_response(&params, &mut cx, model),
                 Err(e) => cx.throw_error(e.to_string()),
             }
         }
@@ -165,6 +214,57 @@ fn convert_rdf_json_node_result_to_neon_object<'a, C: Context<'a>>(
     }
 }
 
+fn make_response<'a, 'b, C: Context<'a>>(
+    params: &'b Handle<'b, JsObject>,
+    cx: &mut C,
+    doc: TurtleDoc<'b>,
+) -> JsResult<'a, JsValue> {
+    let as_n_3: Option<Handle<JsBoolean>> = params.get_opt(cx, PARAMS_AS_N3)?;
+    let output_file_path: Option<Handle<JsString>> = params.get_opt(cx, PARAMS_OUTPUT_FILE_PATH)?;
+    let buf_size: Option<Handle<JsNumber>> = params.get_opt(cx, PARAMS_BUF_SIZE)?;
+
+    let as_n_3 = if let Some(as_n_3) = as_n_3 {
+        as_n_3.value(cx)
+    } else {
+        false
+    };
+    let output_file_path = if let Some(output_file_path) = output_file_path {
+        Some(output_file_path.value(cx))
+    } else {
+        None
+    };
+    let buf_size = if let Some(buf_size) = buf_size {
+        Some(buf_size.value(cx).abs() as usize)
+    } else {
+        None
+    };
+
+    if let Some(opf) = output_file_path {
+        return match doc.to_file(&opf, buf_size, !as_n_3) {
+            Ok(_) => {
+                let b = cx.boolean(true);
+                let b = b.as_value(cx);
+                Ok(b)
+            }
+            Err(e) => cx.throw_error(e.to_string()),
+        };
+    } else {
+        if as_n_3 {
+            let ttl = doc.to_string();
+            let s = cx.string(ttl);
+            let s = s.as_value(cx);
+            return Ok(s);
+        } else {
+            let json_stmts: Vec<RdfJsonTriple> = (&doc).into();
+            let array = JsArray::new(cx, json_stmts.len() as u32);
+            for (idx, triple) in json_stmts.into_iter().enumerate() {
+                let stmt_obj = convert_rdf_json_triple_to_neon_object(cx, triple)?;
+                array.set(cx, idx as u32, stmt_obj)?;
+            }
+            return Ok(array.upcast());
+        }
+    }
+}
 fn make_doc<'a, 'b>(
     params: &'b Handle<'b, JsObject>,
     cx: &'b mut FunctionContext,

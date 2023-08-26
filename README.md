@@ -140,5 +140,5 @@ let payloadFilter = {
   object: undefined
 }
 
-let triples = tortank.filter(payloadFilter)
+let triples = tortank.statements(payloadFilter)
 

@@ -26,11 +26,11 @@ pub fn difference(mut cx: FunctionContext) -> JsResult<JsObject> {
                     }
                     Ok(array.upcast())
                 }
-                Err(e) => return cx.throw_error(e.to_string()),
+                Err(e) => cx.throw_error(e.to_string()),
             }
         }
-        (Ok(_), Err(e)) | (Err(e), Ok(_)) => return cx.throw_error(e.to_string()),
-        (Err(e1), Err(e2)) => return cx.throw_error(e1.to_string() + &e2.to_string()),
+        (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.to_string()),
+        (Err(e1), Err(e2)) => cx.throw_error(e1.to_string() + &e2.to_string()),
     }
 }
 
@@ -80,7 +80,7 @@ pub fn filter(mut cx: FunctionContext) -> JsResult<JsObject> {
             }
             Ok(array.upcast())
         }
-        Err(e) => return cx.throw_error(e.to_string()),
+        Err(e) => cx.throw_error(e.to_string()),
     }
 }
 pub fn intersection(mut cx: FunctionContext) -> JsResult<JsObject> {
@@ -104,11 +104,11 @@ pub fn intersection(mut cx: FunctionContext) -> JsResult<JsObject> {
                     }
                     Ok(array.upcast())
                 }
-                Err(e) => return cx.throw_error(e.to_string()),
+                Err(e) => cx.throw_error(e.to_string()),
             }
         }
-        (Ok(_), Err(e)) | (Err(e), Ok(_)) => return cx.throw_error(e.to_string()),
-        (Err(e1), Err(e2)) => return cx.throw_error(e1.to_string() + &e2.to_string()),
+        (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.to_string()),
+        (Err(e1), Err(e2)) => cx.throw_error(e1.to_string() + &e2.to_string()),
     }
 }
 

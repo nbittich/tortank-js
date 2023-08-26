@@ -1,0 +1,23 @@
+[package]
+name = "tortank-js"
+version = "0.1.0"
+description = "Turtle/N3 parser"
+authors = ["Nordine Bittich"]
+license = "MIT"
+edition = "2018"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = "1.0.188"
+serde_json = "1.0.105"
+tortank = "0.1.2"
+
+[dependencies.neon]
+version = "0.10"
+default-features = false
+features = ["napi-6"]

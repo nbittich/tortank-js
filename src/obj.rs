@@ -12,9 +12,7 @@ const PARAMS_RHS_DATA: &str = "rhsData";
 const PARAMS_SUBJECT_NODE: &str = "subject";
 const PARAMS_PREDICATE_NODE: &str = "predicate";
 const PARAMS_OBJECT_NODE: &str = "object";
-const PARAMS_TTL_PATH: &str = "ttlPath";
-const PARAMS_TTL_DATA: &str = "ttlData";
-const PARAMS_AS_N3: &str = "asN3";
+const PARAMS_OUTPUT_TYPE: &str = "outputType";
 const PARAMS_OUTPUT_FILE_PATH: &str = "outputFilePath";
 const PARAMS_BUF_SIZE: &str = "bufSize";
 
@@ -89,39 +87,36 @@ pub fn statements(mut cx: FunctionContext) -> JsResult<JsValue> {
     let predicate: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_PREDICATE_NODE)?;
     let object: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_OBJECT_NODE)?;
 
-    let ttl_doc = make_doc(&params, &mut cx, &mut buf, PARAMS_TTL_PATH, PARAMS_TTL_DATA);
+    let ttl_doc = make_doc(&params, &mut cx, &mut buf, PARAMS_LHS_PATH, PARAMS_LHS_DATA);
 
     match ttl_doc {
         Ok(ttl_doc) => {
             let subject = if let Some(subject) = subject {
-                let subject = subject.value(&mut cx);
-                Some(Node::Iri(Cow::Owned(subject)))
-                // todo
+                Some(subject.value(&mut cx))
             } else {
                 None
             };
             let predicate = if let Some(predicate) = predicate {
-                let predicate = predicate.value(&mut cx);
-                Some(Node::Iri(Cow::Owned(predicate)))
-                // todo
+                Some(predicate.value(&mut cx))
             } else {
                 None
             };
             let object = if let Some(object) = object {
                 let object = object.value(&mut cx);
-                Some(Node::Iri(Cow::Owned(object)))
-                // todo
+                Some(object)
             } else {
                 None
             };
-            let filtered_stmts = ttl_doc
-                .list_statements(subject.as_ref(), predicate.as_ref(), object.as_ref())
-                .into_iter()
-                .cloned()
-                .collect();
+            let stmts_res = ttl_doc.parse_and_list_statements(subject, predicate, object);
 
-            match TurtleDoc::from_statements(filtered_stmts) {
-                Ok(doc) => make_response(&params, &mut cx, doc),
+            match stmts_res {
+                Ok(stmts) => {
+                    let filtered_stmts = stmts.into_iter().cloned().collect();
+                    match TurtleDoc::from_statements(filtered_stmts) {
+                        Ok(doc) => make_response(&params, &mut cx, doc),
+                        Err(e) => cx.throw_error(e.to_string()),
+                    }
+                }
                 Err(e) => cx.throw_error(e.to_string()),
             }
         }
@@ -219,12 +214,17 @@ fn make_response<'a, 'b, C: Context<'a>>(
     cx: &mut C,
     doc: TurtleDoc<'b>,
 ) -> JsResult<'a, JsValue> {
-    let as_n_3: Option<Handle<JsBoolean>> = params.get_opt(cx, PARAMS_AS_N3)?;
+    let out_type: Option<Handle<JsString>> = params.get_opt(cx, PARAMS_OUTPUT_TYPE)?;
     let output_file_path: Option<Handle<JsString>> = params.get_opt(cx, PARAMS_OUTPUT_FILE_PATH)?;
     let buf_size: Option<Handle<JsNumber>> = params.get_opt(cx, PARAMS_BUF_SIZE)?;
 
-    let as_n_3 = if let Some(as_n_3) = as_n_3 {
-        as_n_3.value(cx)
+    // todo refactor this to offer more output type
+    let as_n_3 = if let Some(out_type) = out_type {
+        match out_type.value(cx).as_str() {
+            "js" => false,
+            "n3" => true,
+            s => return cx.throw_error(format!("{s} is not a valid output type")),
+        }
     } else {
         false
     };

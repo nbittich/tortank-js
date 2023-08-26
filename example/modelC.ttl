@@ -1,0 +1,2 @@
+<http://example.org/show/218> <http://example.org/show/localName> "That Seventies Show"@en .
+<http://bittich.be/some/url/1233> <http://example.org/firstName> <http://n.com/nordine>  .

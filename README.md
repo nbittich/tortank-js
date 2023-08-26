@@ -129,24 +129,3 @@ tortank.statements(params);
 
 ```
 
-## Examples
-
-const tortank = require('.');
-const payloadCompare = {
-    lhsPath: "./example/modelA.ttl",
-    rhsPath: "./example/modelB.ttl"
-}
-
-let diff = tortank.difference(payloadCompare);
-let intersection =tortank.intersection(payloadCompare);
-
-
-let payloadFilter = {
-  ttlPath: "./example/input.ttl",
-  subject: "http://publications.europa.eu/resource/authority/country/ZWE",
-  predicate: undefined,
-  object: undefined
-}
-
-let triples = tortank.statements(payloadFilter)
-

@@ -1,20 +1,12 @@
 {
-  "name": "rdf-tortank",
+  "name": "rdf-tortank-linux",
   "version": "0.1.4",
   "description": "Turtle/N3 parser",
   "main": "index.node",
-  "scripts": {
-    "build": "cargo-cp-artifact -nd index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npm run build --",
-    "build-release": "npm run build -- --release",
-    "install": "npm run build-release",
-    "test": "cargo test"
-  },
+  "scripts": {},
   "author": "Nordine Bittich",
   "license": "MIT",
-  "devDependencies": {
-    "cargo-cp-artifact": "^0.1"
-  },
+  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/nbittich/tortank-js.git"

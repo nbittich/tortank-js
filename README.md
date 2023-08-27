@@ -5,7 +5,7 @@ Uses [Tortank](https://github.com/nbittich/tortank).
 
 ## Installation 
 
-### Using the prebuilt node addon
+### Using the prebuilt node addon (GLIBC)
 
 <b>This will only work if you are on linux and if you have GLIBC 2.31+ installed (check with `ldd --version`)</b>
 
@@ -17,6 +17,19 @@ Uses [Tortank](https://github.com/nbittich/tortank).
 - `npm i rdf-tortank-linux`
 - `node`
 - `const tortank = require('rdf-tortank-linux')`
+
+### Using the prebuilt node addon (MUSL)
+
+<b>This will only work if you are on linux and if you have libc.musl-x86_64 installed (check with `ldd --version`)</b>
+
+#### Example using docker
+
+- `docker run --rm -it node:16-bookworm bash`
+- `mkdir example && cd example`
+- `npm init --yes`
+- `npm i rdf-tortank-linux-musl`
+- `node`
+- `const tortank = require('rdf-tortank-linux-musl')`
 
 ### Using Rust
 

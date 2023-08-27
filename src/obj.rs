@@ -28,7 +28,7 @@ pub fn merge(mut cx: FunctionContext) -> JsResult<JsValue> {
         &mut cx,
         &mut buf_rhs,
         PARAMS_RHS_PATH,
-        PARAMS_RHS_PATH,
+        PARAMS_RHS_DATA,
     );
 
     match (ttl_doc_lhs, ttl_doc_rhs) {
@@ -57,7 +57,7 @@ pub fn difference(mut cx: FunctionContext) -> JsResult<JsValue> {
         &mut cx,
         &mut buf_rhs,
         PARAMS_RHS_PATH,
-        PARAMS_RHS_PATH,
+        PARAMS_RHS_DATA,
     );
 
     match (ttl_doc_lhs, ttl_doc_rhs) {

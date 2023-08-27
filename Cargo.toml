@@ -1,6 +1,6 @@
 [package]
 name = "rdf-tortank"
-version = "0.1.0"
+version = "0.1.2"
 description = "Node addon for Turtle/N3 parser"
 authors = ["Nordine Bittich"]
 license = "MIT"

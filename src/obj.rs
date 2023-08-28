@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use neon::prelude::*;
 use tortank::turtle::turtle_doc::{
-    RdfJsonNodeResult, RdfJsonTriple, Statement, TurtleDoc, TurtleDocError,
+    RdfJsonNode, RdfJsonNodeResult, RdfJsonTriple, Statement, TurtleDoc, TurtleDocError,
 };
 
 const PARAMS_LHS_PATH: &str = "lhsPath";
@@ -321,6 +321,77 @@ fn convert_rdf_json_node_result_to_neon_object<'a, C: Context<'a>>(
     }
 }
 
+fn convert_neon_object_to_rdf_js_triple<'a, C: Context<'a>>(
+    cx: &mut C,
+    obj: Handle<JsObject>,
+) -> Result<RdfJsonTriple, TurtleDocError> {
+    let subject: Handle<JsObject> = obj.get(cx, "subject").map_err(|e| TurtleDocError {
+        message: e.to_string(),
+    })?;
+    let predicate: Handle<JsObject> = obj.get(cx, "predicate").map_err(|e| TurtleDocError {
+        message: e.to_string(),
+    })?;
+    let object: Handle<JsObject> = obj.get(cx, "object").map_err(|e| TurtleDocError {
+        message: e.to_string(),
+    })?;
+
+    let subject = convert_neon_object_to_rdf_js_node_res(cx, subject)?;
+    let predicate = convert_neon_object_to_rdf_js_node_res(cx, predicate)?;
+    let object = convert_neon_object_to_rdf_js_node_res(cx, object)?;
+    Ok(RdfJsonTriple {
+        subject,
+        predicate,
+        object,
+    })
+}
+fn convert_neon_object_to_rdf_js_node_res<'a, C: Context<'a>>(
+    cx: &mut C,
+    obj: Handle<JsObject>,
+) -> Result<RdfJsonNodeResult, TurtleDocError> {
+    if let Ok(array) = obj.downcast::<JsArray, _>(cx) {
+        let js_arr: Vec<Handle<JsValue>> = array.to_vec(cx).map_err(|e| TurtleDocError {
+            message: e.to_string(),
+        })?;
+        let mut arr = Vec::with_capacity(js_arr.len());
+        for ja in js_arr {
+            let ja: Handle<JsObject> =
+                ja.downcast::<JsObject, _>(cx).map_err(|e| TurtleDocError {
+                    message: e.to_string(),
+                })?;
+            arr.push(convert_neon_object_to_rdf_js_node_res(cx, ja)?);
+        }
+        Ok(RdfJsonNodeResult::ListNodes(arr))
+    } else {
+        let nod = convert_neon_object_to_rdf_js_node(cx, obj)?;
+        Ok(RdfJsonNodeResult::SingleNode(nod))
+    }
+}
+fn convert_neon_object_to_rdf_js_node<'a, C: Context<'a>>(
+    cx: &mut C,
+    obj: Handle<JsObject>,
+) -> Result<RdfJsonNode, TurtleDocError> {
+    let value: Handle<JsString> = obj.get(cx, "value").map_err(|e| TurtleDocError {
+        message: e.to_string(),
+    })?;
+    let typ: Handle<JsString> = obj.get(cx, "type").map_err(|e| TurtleDocError {
+        message: e.to_string(),
+    })?;
+    let datatype: Option<Handle<JsString>> =
+        obj.get_opt(cx, "datatype").map_err(|e| TurtleDocError {
+            message: e.to_string(),
+        })?;
+
+    let lang: Option<Handle<JsString>> = obj.get_opt(cx, "lang").map_err(|e| TurtleDocError {
+        message: e.to_string(),
+    })?;
+
+    Ok(RdfJsonNode {
+        typ: typ.value(cx),
+        datatype: datatype.map(|dt| dt.value(cx)),
+        lang: lang.map(|l| l.value(cx)),
+        value: value.value(cx),
+    })
+}
 fn make_response<'a, 'b, C: Context<'a>>(
     params: &'b Handle<'b, JsObject>,
     cx: &mut C,
@@ -397,23 +468,40 @@ fn make_doc<'a, 'b>(
             }
         }
     } else if let Some(data) = data {
-        let data: String = if let Ok(str) = data.downcast::<JsString, _>(cx) {
-            str.value(cx)
+        //convert_neon_object_to_rdf_js_triple
+        if let Ok(data) = data.downcast::<JsString, _>(cx) {
+            let data = data.value(cx);
+            buf.push_str(&data);
+            match TurtleDoc::try_from(buf.as_str()) {
+                Ok(doc) => Ok(DocType::TurtleDoc(doc)),
+                Err(e) => match RdfJsonTriple::from_json(buf.as_str()) {
+                    Ok(rjt) => Ok(DocType::RdfJsonTriple(rjt)),
+                    Err(e2) => Err(TurtleDocError {
+                        message: format!("could not make doc from input:\n-{e}\n-{e2}"),
+                    }),
+                },
+            }
+        } else if let Ok(data) = data.downcast::<JsArray, _>(cx) {
+            let js_arr = data.to_vec(cx).map_err(|e| TurtleDocError {
+                message: e.to_string(),
+            })?;
+            let mut triples = Vec::with_capacity(js_arr.len());
+            for ja in js_arr {
+                let ja: Handle<JsObject> =
+                    ja.downcast::<JsObject, _>(cx).map_err(|e| TurtleDocError {
+                        message: e.to_string(),
+                    })?;
+                triples.push(convert_neon_object_to_rdf_js_triple(cx, ja)?)
+            }
+            Ok(DocType::RdfJsonTriple(triples))
+        } else if let Ok(data) = data.downcast::<JsObject, _>(cx) {
+            let triples = convert_neon_object_to_rdf_js_triple(cx, data)?;
+            Ok(DocType::RdfJsonTriple(vec![triples]))
         } else {
             // todo convert it to JsObject and then to RdfJsTriple
             return Err(TurtleDocError {
                 message: "not implemented yet.".into(),
             });
-        };
-        buf.push_str(&data);
-        match TurtleDoc::try_from(buf.as_str()) {
-            Ok(doc) => Ok(DocType::TurtleDoc(doc)),
-            Err(e) => match RdfJsonTriple::from_json(buf.as_str()) {
-                Ok(rjt) => Ok(DocType::RdfJsonTriple(rjt)),
-                Err(e2) => Err(TurtleDocError {
-                    message: format!("could not make doc from input:\n-{e}\n-{e2}"),
-                }),
-            },
         }
     } else {
         Err(TurtleDocError {

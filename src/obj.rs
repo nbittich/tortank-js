@@ -490,7 +490,6 @@ fn make_doc<'a, 'b>(
             let triples = convert_neon_object_to_rdf_js_triple(cx, data)?;
             Ok(DocType::RdfJsonTriple(vec![triples]))
         } else {
-            // todo convert it to JsObject and then to RdfJsTriple
             return Err(TurtleDocError {
                 message: "not implemented yet.".into(),
             });

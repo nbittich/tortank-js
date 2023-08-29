@@ -15,7 +15,7 @@ crate-type = ["dylib"]
 [dependencies]
 serde = "1.0.188"
 serde_json = "1.0.105"
-tortank = "0.1.12"
+tortank = "0.1.13"
 
 [dependencies.neon]
 version = "0.10.1"

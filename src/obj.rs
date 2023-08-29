@@ -451,7 +451,7 @@ fn make_doc<'a, 'b>(
         let path = path.value(cx);
         match PathBuf::from(&path).extension().and_then(|s| s.to_str()) {
             Some("json") => {
-                let triples = RdfJsonTriple::from_json(buf.as_str())?;
+                let triples = RdfJsonTriple::from_json_file(&path)?;
                 Ok(DocType::RdfJsonTriple(triples))
             }
             _ => {

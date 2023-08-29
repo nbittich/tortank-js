@@ -1,6 +1,6 @@
 {
   "name": "rdf-tortank-linux-musl",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Turtle/N3 parser",
   "main": "index.node",
   "scripts": {},

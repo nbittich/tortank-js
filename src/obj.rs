@@ -57,12 +57,12 @@ pub fn merge(mut cx: FunctionContext) -> JsResult<JsValue> {
             }
         }
         (
-            Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))),
-            Ok(DocType::RdfJsonTriple((rhs, rhsPrefixes))),
+            Ok(DocType::RdfJsonTriple((lhs, lhs_prefixes))),
+            Ok(DocType::RdfJsonTriple((rhs, rhs_prefixes))),
         ) => {
             match (
-                rdf_json_triple_to_doc(&lhs[..], lhsPrefixes),
-                rdf_json_triple_to_doc(&rhs[..], rhsPrefixes),
+                rdf_json_triple_to_doc(&lhs[..], lhs_prefixes),
+                rdf_json_triple_to_doc(&rhs[..], rhs_prefixes),
             ) {
                 (Ok(lhs), Ok(rhs)) => make_response(&params, &mut cx, lhs + rhs),
                 (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.message),
@@ -117,19 +117,19 @@ pub fn difference(mut cx: FunctionContext) -> JsResult<JsValue> {
                 Err(e) => cx.throw_error(e.message),
             }
         }
-        (Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))), Ok(DocType::TurtleDoc(rhs))) => {
-            match rdf_json_triple_to_doc(&lhs[..], lhsPrefixes) {
+        (Ok(DocType::RdfJsonTriple((lhs, lhs_prefixes))), Ok(DocType::TurtleDoc(rhs))) => {
+            match rdf_json_triple_to_doc(&lhs[..], lhs_prefixes) {
                 Ok(doc) => diff_fn(&params, &mut cx, doc, rhs),
                 Err(e) => cx.throw_error(e.message),
             }
         }
         (
-            Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))),
-            Ok(DocType::RdfJsonTriple((rhs, rhsPrefixes))),
+            Ok(DocType::RdfJsonTriple((lhs, lhs_prefixes))),
+            Ok(DocType::RdfJsonTriple((rhs, rhs_prefixes))),
         ) => {
             match (
-                rdf_json_triple_to_doc(&lhs[..], lhsPrefixes),
-                rdf_json_triple_to_doc(&rhs[..], rhsPrefixes),
+                rdf_json_triple_to_doc(&lhs[..], lhs_prefixes),
+                rdf_json_triple_to_doc(&rhs[..], rhs_prefixes),
             ) {
                 (Ok(lhs), Ok(rhs)) => diff_fn(&params, &mut cx, lhs, rhs),
                 (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.message),
@@ -249,12 +249,12 @@ pub fn intersection(mut cx: FunctionContext) -> JsResult<JsValue> {
             }
         }
         (
-            Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))),
-            Ok(DocType::RdfJsonTriple((rhs, rhsPrefixes))),
+            Ok(DocType::RdfJsonTriple((lhs, lhs_prefixes))),
+            Ok(DocType::RdfJsonTriple((rhs, rhs_prefixes))),
         ) => {
             match (
-                rdf_json_triple_to_doc(&lhs[..], lhsPrefixes),
-                rdf_json_triple_to_doc(&rhs[..], rhsPrefixes),
+                rdf_json_triple_to_doc(&lhs[..], lhs_prefixes),
+                rdf_json_triple_to_doc(&rhs[..], rhs_prefixes),
             ) {
                 (Ok(lhs), Ok(rhs)) => intersection_fn(&params, &mut cx, lhs, rhs),
                 (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.message),

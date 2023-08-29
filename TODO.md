@@ -1,1 +1,3 @@
+- xsd:date && xsd:dateTime (the parser should change)
+- anonymous node iri should be parameterized
 - need to figure how node-pre-gyp works

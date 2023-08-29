@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 use neon::prelude::*;
 use tortank::turtle::turtle_doc::{
@@ -15,10 +15,11 @@ const PARAMS_OBJECT_NODE: &str = "object";
 const PARAMS_OUTPUT_TYPE: &str = "outputType";
 const PARAMS_OUTPUT_FILE_PATH: &str = "outputFilePath";
 const PARAMS_BUF_SIZE: &str = "bufSize";
+const PARAMS_EXTRA_PREFIXES: &str = "extraPrefixes";
 
 pub enum DocType<'a> {
     TurtleDoc(TurtleDoc<'a>),
-    RdfJsonTriple(Vec<RdfJsonTriple>),
+    RdfJsonTriple((Vec<RdfJsonTriple>, BTreeMap<String, String>)),
 }
 pub fn merge(mut cx: FunctionContext) -> JsResult<JsValue> {
     let params = cx.argument::<JsObject>(0)?;
@@ -43,22 +44,25 @@ pub fn merge(mut cx: FunctionContext) -> JsResult<JsValue> {
         (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::TurtleDoc(rhs))) => {
             make_response(&params, &mut cx, lhs + rhs)
         }
-        (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::RdfJsonTriple(rhs))) => {
-            match rdf_json_triple_to_doc(&rhs[..]) {
+        (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::RdfJsonTriple((rhs, prefixes)))) => {
+            match rdf_json_triple_to_doc(&rhs[..], prefixes) {
                 Ok(doc) => make_response(&params, &mut cx, lhs + doc),
                 Err(e) => cx.throw_error(e.message),
             }
         }
-        (Ok(DocType::RdfJsonTriple(lhs)), Ok(DocType::TurtleDoc(rhs))) => {
-            match rdf_json_triple_to_doc(&lhs[..]) {
+        (Ok(DocType::RdfJsonTriple((lhs, prefixes))), Ok(DocType::TurtleDoc(rhs))) => {
+            match rdf_json_triple_to_doc(&lhs[..], prefixes) {
                 Ok(doc) => make_response(&params, &mut cx, doc + rhs),
                 Err(e) => cx.throw_error(e.message),
             }
         }
-        (Ok(DocType::RdfJsonTriple(lhs)), Ok(DocType::RdfJsonTriple(rhs))) => {
+        (
+            Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))),
+            Ok(DocType::RdfJsonTriple((rhs, rhsPrefixes))),
+        ) => {
             match (
-                rdf_json_triple_to_doc(&lhs[..]),
-                rdf_json_triple_to_doc(&rhs[..]),
+                rdf_json_triple_to_doc(&lhs[..], lhsPrefixes),
+                rdf_json_triple_to_doc(&rhs[..], rhsPrefixes),
             ) {
                 (Ok(lhs), Ok(rhs)) => make_response(&params, &mut cx, lhs + rhs),
                 (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.message),
@@ -107,22 +111,25 @@ pub fn difference(mut cx: FunctionContext) -> JsResult<JsValue> {
         (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::TurtleDoc(rhs))) => {
             diff_fn(&params, &mut cx, lhs, rhs)
         }
-        (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::RdfJsonTriple(rhs))) => {
-            match rdf_json_triple_to_doc(&rhs[..]) {
+        (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::RdfJsonTriple((rhs, prefixes)))) => {
+            match rdf_json_triple_to_doc(&rhs[..], prefixes) {
                 Ok(doc) => diff_fn(&params, &mut cx, lhs, doc),
                 Err(e) => cx.throw_error(e.message),
             }
         }
-        (Ok(DocType::RdfJsonTriple(lhs)), Ok(DocType::TurtleDoc(rhs))) => {
-            match rdf_json_triple_to_doc(&lhs[..]) {
+        (Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))), Ok(DocType::TurtleDoc(rhs))) => {
+            match rdf_json_triple_to_doc(&lhs[..], lhsPrefixes) {
                 Ok(doc) => diff_fn(&params, &mut cx, doc, rhs),
                 Err(e) => cx.throw_error(e.message),
             }
         }
-        (Ok(DocType::RdfJsonTriple(lhs)), Ok(DocType::RdfJsonTriple(rhs))) => {
+        (
+            Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))),
+            Ok(DocType::RdfJsonTriple((rhs, rhsPrefixes))),
+        ) => {
             match (
-                rdf_json_triple_to_doc(&lhs[..]),
-                rdf_json_triple_to_doc(&rhs[..]),
+                rdf_json_triple_to_doc(&lhs[..], lhsPrefixes),
+                rdf_json_triple_to_doc(&rhs[..], rhsPrefixes),
             ) {
                 (Ok(lhs), Ok(rhs)) => diff_fn(&params, &mut cx, lhs, rhs),
                 (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.message),
@@ -182,10 +189,12 @@ pub fn statements(mut cx: FunctionContext) -> JsResult<JsValue> {
                 DocType::TurtleDoc(doc) => {
                     statements_fn(&params, &mut cx, subject, predicate, object, doc)
                 }
-                DocType::RdfJsonTriple(rjs) => match rdf_json_triple_to_doc(&rjs[..]) {
-                    Ok(doc) => statements_fn(&params, &mut cx, subject, predicate, object, doc),
-                    Err(e) => cx.throw_error(e.message),
-                },
+                DocType::RdfJsonTriple((rjs, prefixes)) => {
+                    match rdf_json_triple_to_doc(&rjs[..], prefixes) {
+                        Ok(doc) => statements_fn(&params, &mut cx, subject, predicate, object, doc),
+                        Err(e) => cx.throw_error(e.message),
+                    }
+                }
             }
         }
         Err(e) => cx.throw_error(e.to_string()),
@@ -227,22 +236,25 @@ pub fn intersection(mut cx: FunctionContext) -> JsResult<JsValue> {
         (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::TurtleDoc(rhs))) => {
             intersection_fn(&params, &mut cx, lhs, rhs)
         }
-        (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::RdfJsonTriple(rhs))) => {
-            match rdf_json_triple_to_doc(&rhs[..]) {
+        (Ok(DocType::TurtleDoc(lhs)), Ok(DocType::RdfJsonTriple((rhs, prefixes)))) => {
+            match rdf_json_triple_to_doc(&rhs[..], prefixes) {
                 Ok(doc) => intersection_fn(&params, &mut cx, lhs, doc),
                 Err(e) => cx.throw_error(e.message),
             }
         }
-        (Ok(DocType::RdfJsonTriple(lhs)), Ok(DocType::TurtleDoc(rhs))) => {
-            match rdf_json_triple_to_doc(&lhs[..]) {
+        (Ok(DocType::RdfJsonTriple((lhs, prefixes))), Ok(DocType::TurtleDoc(rhs))) => {
+            match rdf_json_triple_to_doc(&lhs[..], prefixes) {
                 Ok(doc) => intersection_fn(&params, &mut cx, doc, rhs),
                 Err(e) => cx.throw_error(e.message),
             }
         }
-        (Ok(DocType::RdfJsonTriple(lhs)), Ok(DocType::RdfJsonTriple(rhs))) => {
+        (
+            Ok(DocType::RdfJsonTriple((lhs, lhsPrefixes))),
+            Ok(DocType::RdfJsonTriple((rhs, rhsPrefixes))),
+        ) => {
             match (
-                rdf_json_triple_to_doc(&lhs[..]),
-                rdf_json_triple_to_doc(&rhs[..]),
+                rdf_json_triple_to_doc(&lhs[..], lhsPrefixes),
+                rdf_json_triple_to_doc(&rhs[..], rhsPrefixes),
             ) {
                 (Ok(lhs), Ok(rhs)) => intersection_fn(&params, &mut cx, lhs, rhs),
                 (Ok(_), Err(e)) | (Err(e), Ok(_)) => cx.throw_error(e.message),
@@ -256,9 +268,14 @@ pub fn intersection(mut cx: FunctionContext) -> JsResult<JsValue> {
     }
 }
 
-fn rdf_json_triple_to_doc(triples: &[RdfJsonTriple]) -> Result<TurtleDoc<'_>, TurtleDocError> {
+fn rdf_json_triple_to_doc(
+    triples: &[RdfJsonTriple],
+    prefixes: BTreeMap<String, String>,
+) -> Result<TurtleDoc<'_>, TurtleDocError> {
     let stmts = Statement::from_rdf_json_triples(triples)?;
-    TurtleDoc::try_from(stmts)
+    let mut doc = TurtleDoc::try_from(stmts)?;
+    doc.add_prefixes(prefixes);
+    Ok(doc)
 }
 
 fn convert_rdf_json_triple_to_neon_object<'a, C: Context<'a>>(
@@ -447,15 +464,51 @@ fn make_doc<'a, 'b>(
             message: e.to_string(),
         })?;
 
+    // extract prefixes
+    let prefixes: Option<Handle<JsObject>> =
+        params
+            .get_opt(cx, PARAMS_EXTRA_PREFIXES)
+            .map_err(|e| TurtleDocError {
+                message: e.to_string(),
+            })?;
+
+    let mut prefixes_map = BTreeMap::new();
+    if let Some(prefixes) = prefixes {
+        // do
+
+        let properties = prefixes
+            .get_own_property_names(cx)
+            .and_then(|p| p.to_vec(cx))
+            .map_err(|e| TurtleDocError {
+                message: e.to_string(),
+            })?;
+
+        for property in properties {
+            if let Ok(property) = property.downcast::<JsString, _>(cx) {
+                let property = property.value(cx);
+                let value: Result<Option<Handle<JsString>>, _> =
+                    prefixes.get_opt(cx, property.as_str());
+                if let Ok(Some(value)) = value {
+                    let value = value.value(cx);
+                    prefixes_map.insert(property, value);
+                } else if let Err(e) = value {
+                    eprintln!("warning! value for {property} is incorrect. {e}");
+                }
+            } else {
+                eprintln!("warning! could not downcast property {property:?} to string");
+            }
+        }
+    }
     if let Some(path) = path {
         let path = path.value(cx);
         match PathBuf::from(&path).extension().and_then(|s| s.to_str()) {
             Some("json") => {
                 let triples = RdfJsonTriple::from_json_file(&path)?;
-                Ok(DocType::RdfJsonTriple(triples))
+                Ok(DocType::RdfJsonTriple((triples, prefixes_map)))
             }
             _ => {
-                let doc = TurtleDoc::from_file(path, buf)?;
+                let mut doc = TurtleDoc::from_file(path, buf)?;
+                doc.add_prefixes(prefixes_map);
                 Ok(DocType::TurtleDoc(doc))
             }
         }
@@ -465,9 +518,12 @@ fn make_doc<'a, 'b>(
             let data = data.value(cx);
             buf.push_str(&data);
             match TurtleDoc::try_from(buf.as_str()) {
-                Ok(doc) => Ok(DocType::TurtleDoc(doc)),
+                Ok(mut doc) => {
+                    doc.add_prefixes(prefixes_map);
+                    Ok(DocType::TurtleDoc(doc))
+                }
                 Err(e) => match RdfJsonTriple::from_json(buf.as_str()) {
-                    Ok(rjt) => Ok(DocType::RdfJsonTriple(rjt)),
+                    Ok(rjt) => Ok(DocType::RdfJsonTriple((rjt, prefixes_map))),
                     Err(e2) => Err(TurtleDocError {
                         message: format!("could not make doc from input:\n-{e}\n-{e2}"),
                     }),
@@ -485,10 +541,10 @@ fn make_doc<'a, 'b>(
                     })?;
                 triples.push(convert_neon_object_to_rdf_js_triple(cx, ja)?)
             }
-            Ok(DocType::RdfJsonTriple(triples))
+            Ok(DocType::RdfJsonTriple((triples, prefixes_map)))
         } else if let Ok(data) = data.downcast::<JsObject, _>(cx) {
             let triples = convert_neon_object_to_rdf_js_triple(cx, data)?;
-            Ok(DocType::RdfJsonTriple(vec![triples]))
+            Ok(DocType::RdfJsonTriple((vec![triples], prefixes_map)))
         } else {
             return Err(TurtleDocError {
                 message: "not implemented yet.".into(),

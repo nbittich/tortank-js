@@ -71,10 +71,14 @@ const data = `
 
 let params = {
     lhsData: data, // string|undefined, if not provided use lhsPath
-    outputType: "n3", // also optional
+    outputType: "n3", // js|n3|undefined,  output type
+    extraPrefixes: { // also optionals, if you need more prefixes to be defined
+      ext: "http://example.org/show/",
+    },
     subject: undefined, // uri|undefined, to filter subjects (must be an absolute uri)
     predicate: "<http://foaf.com/name>", // rdf iri|undefined, to filter predicates (muts be an absolute uri)
-    object: '"Eve"' // rdf string | rdf iri | undefined, to filter objects
+    object: '"Eve"', // rdf string | rdf iri | undefined, to filter objects
+
 };
 
 tortank.statements(params);

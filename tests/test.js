@@ -254,3 +254,49 @@ describe("Merge", () => {
 
   });
 });
+
+
+describe("Extra Prefixes", () => {
+  it("should work with extra prefixes", () => {
+
+    const params = {
+      lhsPath: "../example/modelC.ttl",
+      outputType: "js",
+      extraPrefixes: {
+        ext: "http://example.org/show/",
+      },
+      subject: "ext:218"
+    };
+
+    let res = statements(params);
+    assert.deepEqual([
+      {
+        subject: { value: 'http://example.org/show/218', type: 'uri' },
+        predicate: { value: 'http://example.org/show/localName', type: 'uri' },
+        object: { value: 'That Seventies Show', type: 'literal', lang: 'en' }
+      }
+    ], res);
+
+    // get all statements in the model
+    params.subject = undefined;
+
+    res = statements(params);
+
+    assert.equal(2, res.length);
+    // check if in json it also works
+
+    params.lhsPath = undefined;
+    params.lhsData = res;
+    params.subject = "ext:218";
+
+    res = statements(params);
+    assert.deepEqual([
+      {
+        subject: { value: 'http://example.org/show/218', type: 'uri' },
+        predicate: { value: 'http://example.org/show/localName', type: 'uri' },
+        object: { value: 'That Seventies Show', type: 'literal', lang: 'en' }
+      }
+    ], res);
+
+  });
+});

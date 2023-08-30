@@ -100,6 +100,7 @@ describe('Difference', () => {
     };
 
     const actual = statements(paramsForStmts);
+
     assert.deepEqual([
       {
         subject: { value: 'mailto:person@example.net', type: 'uri' },
@@ -114,10 +115,10 @@ describe('Difference', () => {
 
     const paramsForDiffBetweenPathAndJs = {
       lhsPath: "/tmp/diff.ttl",
-      rhsData: "actual",
+      rhsData: actual,
       outputType: "js",
     };
-    assert.deepEqual(actual, difference(paramsForDiffBetweenPathAndJs));
+    assert.deepEqual([], difference(paramsForDiffBetweenPathAndJs));
   });
 
   it("should find differences mixing up stuff", () => {
@@ -297,6 +298,36 @@ describe("Extra Prefixes", () => {
         object: { value: 'That Seventies Show', type: 'literal', lang: 'en' }
       }
     ], res);
+
+  });
+});
+
+
+describe("Misc", () => {
+  it("should use custom well known prefix", () => {
+    const data = `
+          @prefix foaf: <http://foaf.com/>.
+          @prefix test: <http://bittich.be/>.
+
+            [ foaf:name "Alice" ] foaf:knows [
+              foaf:name "Bob" ;
+              foaf:lastName "George", "Joshua" ;
+              foaf:knows test:Eve;
+              foaf:mbox <bob@example.com>
+            ] .
+            test:Eve   foaf:name "Eve"  .
+
+    `;
+    const params = {
+      lhsData: data,
+      wellKnownPrefix: "http://bittich.be/well-known#",
+      outputType: "js",
+      object: '"Alice"'
+    };
+
+    const stmt = statements(params);
+    assert.ok(stmt[0]?.subject?.value?.startsWith
+      ("http://bittich.be/well-known#"));
 
   });
 });

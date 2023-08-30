@@ -75,6 +75,7 @@ let params = {
     extraPrefixes: { // also optionals, if you need more prefixes to be defined
       ext: "http://example.org/show/",
     },
+    wellKnownPrefix: undefined, // undefined | string, for anon nodes (https://www.w3.org/2011/rdf-wg/wiki/Skolemisation)
     subject: undefined, // uri|undefined, to filter subjects (must be an absolute uri)
     predicate: "<http://foaf.com/name>", // rdf iri|undefined, to filter predicates (muts be an absolute uri)
     object: '"Eve"', // rdf string | rdf iri | undefined, to filter objects

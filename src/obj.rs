@@ -16,6 +16,7 @@ const PARAMS_OUTPUT_TYPE: &str = "outputType";
 const PARAMS_OUTPUT_FILE_PATH: &str = "outputFilePath";
 const PARAMS_BUF_SIZE: &str = "bufSize";
 const PARAMS_EXTRA_PREFIXES: &str = "extraPrefixes";
+const PARAMS_WELL_KNOWN_PREFIX: &str = "wellKnownPrefix";
 
 pub enum DocType<'a> {
     TurtleDoc(TurtleDoc<'a>),
@@ -464,6 +465,16 @@ fn make_doc<'a, 'b>(
             message: e.to_string(),
         })?;
 
+    // well known prefix
+    let well_known_prefix = if let Ok(Some(well_known_prefix)) =
+        params.get_opt::<JsString, _, _>(cx, PARAMS_WELL_KNOWN_PREFIX)
+    {
+        let wkp = well_known_prefix.value(cx);
+        Some(wkp)
+    } else {
+        None
+    };
+
     // extract prefixes
     let prefixes: Option<Handle<JsObject>> =
         params
@@ -507,7 +518,7 @@ fn make_doc<'a, 'b>(
                 Ok(DocType::RdfJsonTriple((triples, prefixes_map)))
             }
             _ => {
-                let mut doc = TurtleDoc::from_file(path, buf)?;
+                let mut doc = TurtleDoc::from_file(path, well_known_prefix, buf)?;
                 doc.add_prefixes(prefixes_map);
                 Ok(DocType::TurtleDoc(doc))
             }
@@ -517,7 +528,7 @@ fn make_doc<'a, 'b>(
         if let Ok(data) = data.downcast::<JsString, _>(cx) {
             let data = data.value(cx);
             buf.push_str(&data);
-            match TurtleDoc::try_from(buf.as_str()) {
+            match TurtleDoc::try_from((buf.as_str(), well_known_prefix)) {
                 Ok(mut doc) => {
                     doc.add_prefixes(prefixes_map);
                     Ok(DocType::TurtleDoc(doc))

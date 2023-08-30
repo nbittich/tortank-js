@@ -1,3 +1,7 @@
-- xsd:date && xsd:dateTime (the parser should change)
-- anonymous node iri should be parameterized
+- <s>xsd:date && xsd:dateTime (the parser should change)</s>
+- <sanonymous node iri should be parameterized</s>
 - need to figure how node-pre-gyp works
+- transform method (maybe takes a js function as parameter)
+- upsert, delete, functions
+- bindings
+- filters (gt, eq, lt, ge, le) functions

@@ -176,4 +176,45 @@ try {
 }
 ```
 
+### Mapping Function for In-Memory js model
 
+It is possible to provide a mapper function to transform each triple in the model to something else.
+If the function returns null or undefined, the triple will be filtered.
+
+It only works for outputType `js` and in memory model.
+
+```js
+
+const fun = (triple) => {
+    if (triple.object.value.includes("Eve")) {
+        triple.object.value = "Robert";
+    }
+    return triple;
+};
+
+const data = `
+      @prefix foaf: <http://foaf.com/>.
+        [ foaf:name "Alice" ] foaf:knows [
+          foaf:name "Bob" ;
+          foaf:lastName "George", "Joshua" ;
+          foaf:knows [
+          foaf:name "Eve" ] ;
+    foaf:mbox <bob@example.com>] .
+`;
+
+let params = {
+    lhsData: data, 
+    outputType: "js",
+    extraPrefixes: { // also optionals, if you need more prefixes to be defined
+      ext: "http://example.org/show/",
+    },
+    wellKnownPrefix: undefined, 
+    subject: undefined,
+    predicate: "<http://foaf.com/name>", 
+    object: '"Eve"', 
+    mapperFunction: fun
+};
+
+tortank.statements(params); // for example, but could be merge, difference,..
+
+```

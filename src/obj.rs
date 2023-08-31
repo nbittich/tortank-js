@@ -17,11 +17,13 @@ const PARAMS_OUTPUT_FILE_PATH: &str = "outputFilePath";
 const PARAMS_BUF_SIZE: &str = "bufSize";
 const PARAMS_EXTRA_PREFIXES: &str = "extraPrefixes";
 const PARAMS_WELL_KNOWN_PREFIX: &str = "wellKnownPrefix";
+const PARAMS_MAPPER_FUNCTION: &str = "mapperFunction";
 
 pub enum DocType<'a> {
     TurtleDoc(TurtleDoc<'a>),
     RdfJsonTriple((Vec<RdfJsonTriple>, BTreeMap<String, String>)),
 }
+
 pub fn merge(mut cx: FunctionContext) -> JsResult<JsValue> {
     let params = cx.argument::<JsObject>(0)?;
     let mut buf_lhs = String::new();
@@ -144,58 +146,76 @@ pub fn difference(mut cx: FunctionContext) -> JsResult<JsValue> {
     }
 }
 
+fn filter_statements<'a, 'b, C: Context<'a>>(
+    params: &'b Handle<'b, JsObject>,
+    cx: &mut C,
+    ttl_doc: &'b TurtleDoc<'b>,
+) -> Result<TurtleDoc<'b>, TurtleDocError> {
+    let subject: Option<String> = params
+        .get_opt::<JsString, _, _>(cx, PARAMS_SUBJECT_NODE)
+        .map(|s| {
+            if let Some(s) = s {
+                Some(s.value(cx))
+            } else {
+                None
+            }
+        })
+        .map_err(|e| TurtleDocError {
+            message: e.to_string(),
+        })?;
+
+    let predicate: Option<String> = params
+        .get_opt::<JsString, _, _>(cx, PARAMS_PREDICATE_NODE)
+        .map(|s| {
+            if let Some(s) = s {
+                Some(s.value(cx))
+            } else {
+                None
+            }
+        })
+        .map_err(|e| TurtleDocError {
+            message: e.to_string(),
+        })?;
+
+    let object: Option<String> = params
+        .get_opt::<JsString, _, _>(cx, PARAMS_OBJECT_NODE)
+        .map(|s| {
+            if let Some(s) = s {
+                Some(s.value(cx))
+            } else {
+                None
+            }
+        })
+        .map_err(|e| TurtleDocError {
+            message: e.to_string(),
+        })?;
+
+    let stmts: Vec<&Statement> = ttl_doc.parse_and_list_statements(subject, predicate, object)?;
+
+    TurtleDoc::try_from(stmts)
+}
+
 pub fn statements(mut cx: FunctionContext) -> JsResult<JsValue> {
     let params = cx.argument::<JsObject>(0)?;
 
     let mut buf = String::new();
 
-    let subject: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_SUBJECT_NODE)?;
-    let predicate: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_PREDICATE_NODE)?;
-    let object: Option<Handle<JsString>> = params.get_opt(&mut cx, PARAMS_OBJECT_NODE)?;
-
     let ttl_doc = make_doc(&params, &mut cx, &mut buf, PARAMS_LHS_PATH, PARAMS_LHS_DATA);
-    fn statements_fn<'a, 'b, C: Context<'a>>(
-        params: &'b Handle<'b, JsObject>,
-        cx: &mut C,
-        subject: Option<String>,
-        predicate: Option<String>,
-        object: Option<String>,
-        ttl_doc: TurtleDoc<'b>,
-    ) -> JsResult<'a, JsValue> {
-        let stmts_res = ttl_doc.parse_and_list_statements(subject, predicate, object);
 
-        match stmts_res {
-            Ok(stmts) => {
-                let filtered_stmts: Vec<Statement> = stmts.into_iter().cloned().collect();
-                match TurtleDoc::try_from(filtered_stmts) {
-                    Ok(doc) => make_response(params, cx, doc),
-                    Err(e) => cx.throw_error(e.to_string()),
-                }
-            }
-            Err(e) => cx.throw_error(e.to_string()),
-        }
-    }
     match ttl_doc {
         Ok(ttl_doc) => {
-            let subject = subject.map(|subject| subject.value(&mut cx));
-            let predicate = predicate.map(|predicate| predicate.value(&mut cx));
-            let object = if let Some(object) = object {
-                let object = object.value(&mut cx);
-                Some(object)
-            } else {
-                None
-            };
-
-            match ttl_doc {
-                DocType::TurtleDoc(doc) => {
-                    statements_fn(&params, &mut cx, subject, predicate, object, doc)
-                }
-                DocType::RdfJsonTriple((rjs, prefixes)) => {
+            let doc = match ttl_doc {
+                DocType::TurtleDoc(doc) => Ok(doc),
+                DocType::RdfJsonTriple((ref rjs, prefixes)) => {
                     match rdf_json_triple_to_doc(&rjs[..], prefixes) {
-                        Ok(doc) => statements_fn(&params, &mut cx, subject, predicate, object, doc),
+                        Ok(doc) => Ok(doc),
                         Err(e) => cx.throw_error(e.message),
                     }
                 }
+            }?;
+            match filter_statements(&params, &mut cx, &doc) {
+                Ok(doc) => make_response(&params, &mut cx, doc),
+                Err(e) => cx.throw_error(e.message),
             }
         }
         Err(e) => cx.throw_error(e.to_string()),
@@ -407,25 +427,21 @@ fn make_response<'a, 'b, C: Context<'a>>(
     cx: &mut C,
     doc: TurtleDoc<'b>,
 ) -> JsResult<'a, JsValue> {
-    let out_type: Option<Handle<JsString>> = params.get_opt(cx, PARAMS_OUTPUT_TYPE)?;
-    let output_file_path: Option<Handle<JsString>> = params.get_opt(cx, PARAMS_OUTPUT_FILE_PATH)?;
-    let buf_size: Option<Handle<JsNumber>> = params.get_opt(cx, PARAMS_BUF_SIZE)?;
-
     // todo refactor this to offer more output type
-    let as_n_3 = if let Some(out_type) = out_type {
-        match out_type.value(cx).as_str() {
-            "js" => false,
-            "n3" => true,
-            s => return cx.throw_error(format!("{s} is not a valid output type")),
-        }
-    } else {
-        false
-    };
-    let output_file_path = output_file_path.map(|output_file_path| output_file_path.value(cx));
-    let buf_size = buf_size.map(|buf_size| buf_size.value(cx).abs() as usize);
+    let as_n3: bool = params
+        .get_opt::<JsString, _, _>(cx, PARAMS_OUTPUT_TYPE)
+        .map(|ot| ot.map(|o| o.value(cx).as_str() == "n3").unwrap_or(false))?;
+    let output_file_path: Option<String> = params
+        .get_opt::<JsString, _, _>(cx, PARAMS_OUTPUT_FILE_PATH)
+        .map(|otp| otp.map(|o| o.value(cx)))?;
+    let buf_size: Option<usize> = params
+        .get_opt::<JsNumber, _, _>(cx, PARAMS_BUF_SIZE)
+        .map(|buf| buf.map(|b| b.value(cx).abs() as usize))?;
+
+    let js_mapper_func = params.get_opt::<JsFunction, _, _>(cx, PARAMS_MAPPER_FUNCTION)?;
 
     if let Some(opf) = output_file_path {
-        return match doc.to_file(opf, buf_size, !as_n_3) {
+        return match doc.to_file(opf, buf_size, !as_n3) {
             Ok(_) => {
                 let b = cx.boolean(true);
                 let b = b.as_value(cx);
@@ -433,7 +449,7 @@ fn make_response<'a, 'b, C: Context<'a>>(
             }
             Err(e) => cx.throw_error(e.to_string()),
         };
-    } else if as_n_3 {
+    } else if as_n3 {
         let ttl = doc.to_string();
         let s = cx.string(ttl);
         let s = s.as_value(cx);
@@ -441,9 +457,19 @@ fn make_response<'a, 'b, C: Context<'a>>(
     } else {
         let json_stmts: Vec<RdfJsonTriple> = (&doc).into();
         let array = JsArray::new(cx, json_stmts.len() as u32);
-        for (idx, triple) in json_stmts.into_iter().enumerate() {
+        let mut count = 0 as u32;
+        for triple in json_stmts.into_iter() {
             let stmt_obj = convert_rdf_json_triple_to_neon_object(cx, triple)?;
-            array.set(cx, idx as u32, stmt_obj)?;
+            if let Some(fun) = js_mapper_func {
+                let mapped_obj: Handle<JsValue> = fun.call_with(cx).arg(stmt_obj).apply(cx)?;
+                if !mapped_obj.is_a::<JsNull, _>(cx) && !mapped_obj.is_a::<JsUndefined, _>(cx) {
+                    array.set(cx, count, mapped_obj)?;
+                    count += 1;
+                }
+            } else {
+                array.set(cx, count, stmt_obj)?;
+                count += 1;
+            }
         }
         return Ok(array.upcast());
     }

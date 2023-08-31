@@ -331,3 +331,47 @@ describe("Misc", () => {
 
   });
 });
+
+describe("Functions Mapper", () => {
+  it("should map alice to robert", () => {
+    const fun = (triple) => {
+      if (triple.object.value.includes("Eve")) {
+        triple.object.value = "Robert";
+      }
+      return triple;
+    };
+
+    const data = `
+      @prefix foaf: <http://foaf.com/>.
+        [ foaf:name "Alice" ] foaf:knows [
+          foaf:name "Bob" ;
+          foaf:lastName "George", "Joshua" ;
+          foaf:knows [
+          foaf:name "Eve" ] ;
+          foaf:mbox <bob@example.com>] .
+    `;
+
+    let params = {
+      lhsData: data,
+      outputType: "js",
+      extraPrefixes: { // also optionals, if you need more prefixes to be defined
+        ext: "http://example.org/show/",
+      },
+      wellKnownPrefix: undefined,
+      subject: undefined,
+      predicate: "<http://foaf.com/name>",
+      object: '"Eve"',
+      mapperFunction: fun
+    };
+
+    let res = statements(params);
+    assert.deepEqual(res[0]?.object,
+      {
+        value: 'Robert',
+        type: 'literal',
+        datatype: 'http://www.w3.org/2001/XMLSchema#string'
+      }
+    );
+
+  });
+});

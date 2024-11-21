@@ -339,7 +339,7 @@ fn convert_rdf_json_node_result_to_neon_object<'a, C: Context<'a>>(
             Ok(obj)
         }
         RdfJsonNodeResult::ListNodes(list) => {
-            let array = JsArray::new(cx, list.len() as u32);
+            let array = JsArray::new(cx, list.len());
             for (idx, node) in list.into_iter().enumerate() {
                 let obj = convert_rdf_json_node_result_to_neon_object(cx, node)?;
                 array.set(cx, idx as u32, obj)?;
@@ -456,7 +456,7 @@ fn make_response<'a, 'b, C: Context<'a>>(
         Ok(s)
     } else {
         let json_stmts: Vec<RdfJsonTriple> = (&doc).into();
-        let array = JsArray::new(cx, json_stmts.len() as u32);
+        let array = JsArray::new(cx, json_stmts.len());
         let mut count = 0 as u32;
         for triple in json_stmts.into_iter() {
             let stmt_obj = convert_rdf_json_triple_to_neon_object(cx, triple)?;

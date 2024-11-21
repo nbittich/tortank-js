@@ -126,7 +126,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -305,9 +305,9 @@ dependencies = [
 
 [[package]]
 name = "tortank"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b346eaeaa31388834d2f0fa84370001b68201318b80c981f6f33579d6333e947"
+checksum = "96fc6fd2dc7020c8df26b4963810862f92fabdc43049624e46eeb2a0caf4049a"
 dependencies = [
  "chrono",
  "nom",

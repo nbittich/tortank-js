@@ -84,6 +84,15 @@ describe('Statements', () => {
 });
 
 describe('Difference', () => {
+  it("should find differences while using file from ldes", () => {
+    const paramsForDiff = {
+      lhsPath: "../example/modelD.ttl",
+      rhsPath: "../example/modelE.ttl",
+      outputType: "n3",
+    }
+    let actual = difference(paramsForDiff);
+    assert.notEqual([], actual);
+  });
   it("should find differences while using file", () => {
     const paramsForDiff = {
       lhsPath: "../example/modelA.ttl",

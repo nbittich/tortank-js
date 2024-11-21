@@ -2,7 +2,7 @@
 TEMP_IMAGE_NAME=temp-tortank-js-target-musl
 TEMP_CONTAINER_NAME=tortank-js-target-musl
 set -x
-rm index.node
+rm -f index.node
 
 PROJECT_PATH=$(pwd)
 cd ..

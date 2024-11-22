@@ -1,6 +1,6 @@
 [package]
 name = "rdf-tortank"
-version = "0.3.1"
+version = "0.3.2"
 description = "Node addon for Turtle/N3 parser"
 authors = ["Nordine Bittich"]
 license = "MIT"
@@ -13,9 +13,9 @@ crate-type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = "1.0.188"
-serde_json = "1.0.107"
-tortank = "0.22.0"
+serde = "1.0.215"
+serde_json = "1.0.133"
+tortank = "0.23.0"
 
 [dependencies.neon]
 version = "1.0.0"

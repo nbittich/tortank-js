@@ -295,7 +295,7 @@ fn rdf_json_triple_to_doc(
 ) -> Result<TurtleDoc<'_>, TurtleDocError> {
     let stmts = Statement::from_rdf_json_triples(triples)?;
     let mut doc = TurtleDoc::try_from(stmts)?;
-    doc.add_prefixes(prefixes);
+    doc.add_prefixes(prefixes)?;
     Ok(doc)
 }
 
@@ -545,7 +545,7 @@ fn make_doc<'a, 'b>(
             }
             _ => {
                 let mut doc = TurtleDoc::from_file(path, well_known_prefix, buf)?;
-                doc.add_prefixes(prefixes_map);
+                doc.add_prefixes(prefixes_map)?;
                 Ok(DocType::TurtleDoc(doc))
             }
         }
@@ -556,7 +556,7 @@ fn make_doc<'a, 'b>(
             buf.push_str(&data);
             match TurtleDoc::try_from((buf.as_str(), well_known_prefix)) {
                 Ok(mut doc) => {
-                    doc.add_prefixes(prefixes_map);
+                    doc.add_prefixes(prefixes_map)?;
                     Ok(DocType::TurtleDoc(doc))
                 }
                 Err(e) => match RdfJsonTriple::from_json(buf.as_str()) {

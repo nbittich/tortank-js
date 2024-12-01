@@ -217,7 +217,7 @@ dependencies = [
 
 [[package]]
 name = "rdf-tortank"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "neon",
  "serde",
@@ -305,9 +305,9 @@ dependencies = [
 
 [[package]]
 name = "tortank"
-version = "0.23.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92eb33646429707003a7191a31a4797507068a91d5dfbd44780f11af526c7c93"
+checksum = "4491eafd46000dfbc15242a0a0da265818d58c5fd63b89916af4fc06f71a7b73"
 dependencies = [
  "chrono",
  "nom",
